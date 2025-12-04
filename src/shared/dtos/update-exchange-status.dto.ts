@@ -1,8 +1,15 @@
-import { IsEnum } from 'class-validator';
-
-import type { ExchangeRequestStatus } from '../interfaces/exchange-request.interface';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsNotEmpty } from 'class-validator';
 
 export class UpdateExchangeStatusDto {
-  @IsEnum(['PENDING', 'ACCEPTED', 'REJECTED'])
-  status: ExchangeRequestStatus;
+  @ApiProperty({
+    enum: ['PENDING', 'ACCEPTED', 'REJECTED'],
+    example: 'ACCEPTED',
+    description: 'New status of the exchange request',
+  })
+  @IsEnum(['PENDING', 'ACCEPTED', 'REJECTED'], {
+    message: 'Status must be PENDING, ACCEPTED or REJECTED',
+  })
+  @IsNotEmpty()
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
 }

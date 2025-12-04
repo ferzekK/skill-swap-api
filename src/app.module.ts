@@ -3,11 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { SequelizeModule } from '@nestjs/sequelize';
 
 import { DatabaseModule } from './database/database.module';
-import { ExchangeRequest } from './database/models/exchange-request.model';
-import { Skill } from './database/models/skill.model';
-import { UserSkill } from './database/models/user-skill.model';
-import { User } from './database/models/user.model';
+import { Skill, User, UserSkill, ExchangeRequest } from './database/models';
 import { ExchangeModule } from './exchange/exchange.module';
+import { HealthModule } from './health';
 import { SkillsModule } from './skills/skills.module';
 import { UsersModule } from './users/users.module';
 
@@ -41,6 +39,7 @@ import { UsersModule } from './users/users.module';
       }),
     }),
     DatabaseModule,
+    HealthModule,
     UsersModule,
     SkillsModule,
     ExchangeModule,

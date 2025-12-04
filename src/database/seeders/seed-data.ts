@@ -9,65 +9,70 @@ export interface SkillSeedData {
   description: string;
 }
 
-export const ukrainianUsers: UserSeedData[] = [
+export const defaultUsers: UserSeedData[] = [
   {
-    email: 'taras.shevchenko@example.com',
+    email: 'john.doe@example.com',
     passwordHash: '$2b$10$hashedpassword1',
-    fullName: 'Тарас Шевченко',
+    fullName: 'John Doe',
   },
   {
-    email: 'lesya.ukrainka@example.com',
+    email: 'jane.smith@example.com',
     passwordHash: '$2b$10$hashedpassword2',
-    fullName: 'Леся Українка',
+    fullName: 'Jane Smith',
   },
   {
-    email: 'ivan.franko@example.com',
+    email: 'alex.johnson@example.com',
     passwordHash: '$2b$10$hashedpassword3',
-    fullName: 'Іван Франко',
+    fullName: 'Alex Johnson',
   },
   {
-    email: 'hryhoriy.skovoroda@example.com',
+    email: 'emily.brown@example.com',
     passwordHash: '$2b$10$hashedpassword4',
-    fullName: 'Григорій Сковорода',
+    fullName: 'Emily Brown',
   },
   {
-    email: 'olena.pchilka@example.com',
+    email: 'michael.wilson@example.com',
     passwordHash: '$2b$10$hashedpassword5',
-    fullName: 'Олена Пчілка',
+    fullName: 'Michael Wilson',
   },
 ];
 
-export const ukrainianSkills: SkillSeedData[] = [
+export const defaultSkills: SkillSeedData[] = [
   {
-    name: 'Українська мова',
-    description: 'Навчання української мови, граматики та літератури',
+    name: 'JavaScript',
+    description:
+      'Modern JavaScript including ES6+ features and async programming',
   },
   {
-    name: 'Вишивка',
-    description: 'Традиційна українська вишивка хрестиком та гладдю',
+    name: 'TypeScript',
+    description:
+      'Strongly typed superset of JavaScript for scalable applications',
   },
   {
-    name: 'Кобзарство',
-    description: 'Гра на бандурі та кобзі, українські народні пісні',
+    name: 'React',
+    description:
+      'Component-based UI library for building interactive interfaces',
   },
   {
-    name: 'Петриківський розпис',
-    description: 'Декоративний народний розпис з Петриківки',
+    name: 'Node.js',
+    description: 'Server-side JavaScript runtime for backend development',
   },
   {
-    name: 'Писанкарство',
-    description: 'Традиційне розмальовування великодніх яєць',
+    name: 'Python',
+    description:
+      'Versatile programming language for web, data science and automation',
   },
   {
-    name: 'Програмування',
-    description: 'Розробка програмного забезпечення та веб-додатків',
+    name: 'SQL',
+    description: 'Database query language for relational databases',
   },
   {
-    name: 'Веб-дизайн',
-    description: 'Створення сучасних веб-інтерфейсів та UX/UI',
+    name: 'Docker',
+    description:
+      'Containerization platform for consistent deployment environments',
   },
   {
-    name: 'Фотографія',
-    description: 'Професійна та аматорська фотозйомка',
+    name: 'Git',
+    description: 'Version control system for collaborative development',
   },
 ];

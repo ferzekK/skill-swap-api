@@ -1,9 +1,8 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 
-import { ukrainianSkills, ukrainianUsers } from './seed-data';
-import { Skill } from '../models/skill.model';
-import { User } from '../models/user.model';
+import { defaultSkills, defaultUsers } from './seed-data';
+import { Skill, User } from '../models';
 
 @Injectable()
 export class DatabaseSeeder implements OnApplicationBootstrap {
@@ -22,14 +21,14 @@ export class DatabaseSeeder implements OnApplicationBootstrap {
     const isEmpty = await this.isDatabaseEmpty();
 
     if (!isEmpty) {
-      this.logger.log('Database already has data. Skipping seed.');
+      this.logger.log('Database already has data. Skipping seed');
       return;
     }
 
-    this.logger.log('Database is empty. Seeding...');
+    this.logger.log('Seeding...');
     await this.seedUsers();
     await this.seedSkills();
-    this.logger.log('Seeding completed successfully.');
+    this.logger.log('Seeding completed successfully');
   }
 
   private async isDatabaseEmpty(): Promise<boolean> {
@@ -39,12 +38,12 @@ export class DatabaseSeeder implements OnApplicationBootstrap {
   }
 
   private async seedUsers(): Promise<void> {
-    await this.userModel.bulkCreate(ukrainianUsers.map((u) => ({ ...u })));
-    this.logger.log(`Seeded ${ukrainianUsers.length} users.`);
+    await this.userModel.bulkCreate(defaultUsers.map((u) => ({ ...u })));
+    this.logger.log(`Seeded ${defaultUsers.length} users`);
   }
 
   private async seedSkills(): Promise<void> {
-    await this.skillModel.bulkCreate(ukrainianSkills.map((s) => ({ ...s })));
-    this.logger.log(`Seeded ${ukrainianSkills.length} skills.`);
+    await this.skillModel.bulkCreate(defaultSkills.map((s) => ({ ...s })));
+    this.logger.log(`Seeded ${defaultSkills.length} skills`);
   }
 }

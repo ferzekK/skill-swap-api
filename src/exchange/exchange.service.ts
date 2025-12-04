@@ -1,11 +1,18 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
+import { Op } from 'sequelize';
 
 import {
+  Skill,
+  User,
   ExchangeRequest,
   ExchangeRequestStatus,
-} from '../database/models/exchange-request.model';
-import type { CreateExchangeRequestDto } from '../shared/dtos/create-exchange-request.dto';
+} from '../database/models';
+import { CreateExchangeRequestDto } from '../shared/dtos/create-exchange-request.dto';
 import { SkillsService } from '../skills/skills.service';
 import { UsersService } from '../users/users.service';
 
@@ -35,6 +42,12 @@ export class ExchangeService {
       );
     }
 
+    if (dto.requesterId === dto.responderId) {
+      throw new BadRequestException(
+        'Cannot create exchange request with yourself',
+      );
+    }
+
     const offeredSkill = await this.skillsService.findOne(dto.skillOfferedId);
     if (!offeredSkill) {
       throw new BadRequestException(
@@ -60,22 +73,94 @@ export class ExchangeService {
 
   async findAll(): Promise<ExchangeRequest[]> {
     return this.exchangeRequestModel.findAll({
-      include: [{ all: true }],
+      include: [
+        {
+          model: User,
+          as: 'requester',
+          attributes: ['id', 'fullName', 'email'],
+        },
+        {
+          model: User,
+          as: 'responder',
+          attributes: ['id', 'fullName', 'email'],
+        },
+        { model: Skill, as: 'skillOffered', attributes: ['id', 'name'] },
+        { model: Skill, as: 'skillWanted', attributes: ['id', 'name'] },
+      ],
+      order: [['createdAt', 'DESC']],
     });
   }
 
   async findById(id: string): Promise<ExchangeRequest | null> {
     return this.exchangeRequestModel.findByPk(id, {
-      include: [{ all: true }],
+      include: [
+        {
+          model: User,
+          as: 'requester',
+          attributes: ['id', 'fullName', 'email'],
+        },
+        {
+          model: User,
+          as: 'responder',
+          attributes: ['id', 'fullName', 'email'],
+        },
+        { model: Skill, as: 'skillOffered', attributes: ['id', 'name'] },
+        { model: Skill, as: 'skillWanted', attributes: ['id', 'name'] },
+      ],
     });
+  }
+
+  async findByIdOrThrow(id: string): Promise<ExchangeRequest> {
+    const request = await this.findById(id);
+    if (!request) {
+      throw new NotFoundException(`Exchange request with ID ${id} not found`);
+    }
+    return request;
   }
 
   async findByUserId(userId: string): Promise<ExchangeRequest[]> {
     return this.exchangeRequestModel.findAll({
       where: {
-        requesterId: userId,
+        [Op.or]: [{ requesterId: userId }, { responderId: userId }],
       },
-      include: [{ all: true }],
+      include: [
+        {
+          model: User,
+          as: 'requester',
+          attributes: ['id', 'fullName', 'email'],
+        },
+        {
+          model: User,
+          as: 'responder',
+          attributes: ['id', 'fullName', 'email'],
+        },
+        { model: Skill, as: 'skillOffered', attributes: ['id', 'name'] },
+        { model: Skill, as: 'skillWanted', attributes: ['id', 'name'] },
+      ],
+      order: [['createdAt', 'DESC']],
+    });
+  }
+
+  async findByStatus(
+    status: ExchangeRequestStatus,
+  ): Promise<ExchangeRequest[]> {
+    return this.exchangeRequestModel.findAll({
+      where: { status },
+      include: [
+        {
+          model: User,
+          as: 'requester',
+          attributes: ['id', 'fullName', 'email'],
+        },
+        {
+          model: User,
+          as: 'responder',
+          attributes: ['id', 'fullName', 'email'],
+        },
+        { model: Skill, as: 'skillOffered', attributes: ['id', 'name'] },
+        { model: Skill, as: 'skillWanted', attributes: ['id', 'name'] },
+      ],
+      order: [['createdAt', 'DESC']],
     });
   }
 
@@ -83,12 +168,21 @@ export class ExchangeService {
     id: string,
     status: ExchangeRequestStatus,
   ): Promise<ExchangeRequest> {
-    const request = await this.findById(id);
-    if (!request) {
-      throw new BadRequestException(`Exchange request with ID ${id} not found`);
-    }
-
+    const request = await this.findByIdOrThrow(id);
     await request.update({ status });
     return request;
+  }
+
+  async delete(id: string): Promise<void> {
+    const request = await this.findByIdOrThrow(id);
+    await request.destroy();
+  }
+
+  async count(): Promise<number> {
+    return this.exchangeRequestModel.count();
+  }
+
+  async countByStatus(status: ExchangeRequestStatus): Promise<number> {
+    return this.exchangeRequestModel.count({ where: { status } });
   }
 }

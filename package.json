@@ -26,6 +26,8 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/sequelize": "^11.0.1",
+    "@nestjs/swagger": "^11.2.3",
+    "@nestjs/terminus": "^11.0.0",
     "@typescript-eslint/eslint-plugin": "^8.48.1",
     "@typescript-eslint/parser": "^8.48.1",
     "class-transformer": "^0.5.1",
@@ -38,6 +40,7 @@
     "sequelize": "^6.37.7",
     "sequelize-typescript": "^2.1.6",
     "sqlite3": "^5.1.7",
+    "swagger-ui-express": "^5.0.1",
     "umzug": "^3.8.2"
   },
   "devDependencies": {
