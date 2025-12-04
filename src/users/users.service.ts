@@ -5,7 +5,20 @@ import type { User } from '../shared/interfaces/user.interface';
 
 @Injectable()
 export class UsersService {
-  private users: User[] = [];
+  private users: User[] = [
+    {
+      id: '1',
+      email: 'alice@example.com',
+      fullName: 'Alice',
+      passwordHash: 'hashed_password_123',
+    },
+    {
+      id: '2',
+      email: 'bob@example.com',
+      fullName: 'Bob',
+      passwordHash: 'hashed_password_456',
+    },
+  ];
 
   create(dto: CreateUserDto): User {
     const newUser: User = {
