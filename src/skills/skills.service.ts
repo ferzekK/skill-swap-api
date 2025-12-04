@@ -1,44 +1,82 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/sequelize';
+import { Op } from 'sequelize';
 
-import type { CreateSkillDto } from '../shared/dtos/create-skill.dto';
-import type { Skill } from '../shared/interfaces/skill.interface';
+import { Skill } from '../database/models';
+import {
+  CreateSkillDto,
+  UpdateSkillDto,
+} from '../shared/dtos/create-skill.dto';
 
 @Injectable()
 export class SkillsService {
-  private skills: Skill[] = [
-    {
-      id: '1',
-      name: 'JavaScript',
-      description: 'Programming language for web development',
-    },
-    {
-      id: '2',
-      name: 'TypeScript',
-      description: 'Typed superset of JavaScript',
-    },
-    {
-      id: '3',
-      name: 'NestJS',
-      description: 'Progressive Node.js framework',
-    },
-  ];
+  constructor(
+    @InjectModel(Skill)
+    private readonly skillModel: typeof Skill,
+  ) {}
 
-  create(dto: CreateSkillDto): Skill {
-    const newSkill: Skill = {
-      id: Date.now().toString(),
+  async create(dto: CreateSkillDto): Promise<Skill> {
+    return this.skillModel.create({
       name: dto.name,
       description: dto.description,
-    };
-
-    this.skills.push(newSkill);
-    return newSkill;
+    });
   }
 
-  findAll(): Skill[] {
-    return this.skills;
+  async findAll(): Promise<Skill[]> {
+    return this.skillModel.findAll({
+      order: [['name', 'ASC']],
+    });
   }
 
-  findOne(id: string): Skill | undefined {
-    return this.skills.find((skill) => skill.id === id);
+  async findOne(id: string): Promise<Skill | null> {
+    return this.skillModel.findByPk(id);
+  }
+
+  async findOneOrThrow(id: string): Promise<Skill> {
+    const skill = await this.findOne(id);
+    if (!skill) {
+      throw new NotFoundException(`Skill with ID ${id} not found`);
+    }
+    return skill;
+  }
+
+  async findByIds(ids: string[]): Promise<Skill[]> {
+    return this.skillModel.findAll({
+      where: {
+        id: { [Op.in]: ids },
+      },
+    });
+  }
+
+  async search(query: string): Promise<Skill[]> {
+    return this.skillModel.findAll({
+      where: {
+        [Op.or]: [
+          { name: { [Op.iLike]: `%${query}%` } },
+          { description: { [Op.iLike]: `%${query}%` } },
+        ],
+      },
+      order: [['name', 'ASC']],
+    });
+  }
+
+  async update(id: string, dto: UpdateSkillDto): Promise<Skill> {
+    const skill = await this.findOneOrThrow(id);
+
+    const updateData: Partial<Skill> = {};
+    if (dto.name) updateData.name = dto.name;
+    if (dto.description) updateData.description = dto.description;
+
+    await skill.update(updateData);
+    return skill;
+  }
+
+  async delete(id: string): Promise<void> {
+    const skill = await this.findOneOrThrow(id);
+    await skill.destroy();
+  }
+
+  async count(): Promise<number> {
+    return this.skillModel.count();
   }
 }
