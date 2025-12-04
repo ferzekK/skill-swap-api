@@ -1,44 +1,39 @@
 import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/sequelize';
+import { Op } from 'sequelize';
 
+import { Skill } from '../database/models/skill.model';
 import type { CreateSkillDto } from '../shared/dtos/create-skill.dto';
-import type { Skill } from '../shared/interfaces/skill.interface';
 
 @Injectable()
 export class SkillsService {
-  private skills: Skill[] = [
-    {
-      id: '1',
-      name: 'JavaScript',
-      description: 'Programming language for web development',
-    },
-    {
-      id: '2',
-      name: 'TypeScript',
-      description: 'Typed superset of JavaScript',
-    },
-    {
-      id: '3',
-      name: 'NestJS',
-      description: 'Progressive Node.js framework',
-    },
-  ];
+  constructor(
+    @InjectModel(Skill)
+    private readonly skillModel: typeof Skill,
+  ) {}
 
-  create(dto: CreateSkillDto): Skill {
-    const newSkill: Skill = {
-      id: Date.now().toString(),
+  async create(dto: CreateSkillDto): Promise<Skill> {
+    return this.skillModel.create({
       name: dto.name,
       description: dto.description,
-    };
-
-    this.skills.push(newSkill);
-    return newSkill;
+    });
   }
 
-  findAll(): Skill[] {
-    return this.skills;
+  async findAll(): Promise<Skill[]> {
+    return this.skillModel.findAll();
   }
 
-  findOne(id: string): Skill | undefined {
-    return this.skills.find((skill) => skill.id === id);
+  async findOne(id: string): Promise<Skill | null> {
+    return this.skillModel.findByPk(id);
+  }
+
+  async findByIds(ids: string[]): Promise<Skill[]> {
+    return this.skillModel.findAll({
+      where: {
+        id: {
+          [Op.in]: ids,
+        },
+      },
+    });
   }
 }
