@@ -44,7 +44,6 @@ export default [
       '@typescript-eslint/no-misused-promises': 'warn',
       '@typescript-eslint/no-deprecated': 'warn',
 
-      // Disable base rule as it can report incorrect errors
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',

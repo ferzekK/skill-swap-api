@@ -15,7 +15,6 @@ export class ExchangeService {
   ) {}
 
   createExchange(dto: CreateExchangeRequestDto): ExchangeRequest {
-    // Validate requester exists
     const requester = this.usersService.findById(dto.requesterId);
     if (!requester) {
       throw new BadRequestException(
@@ -23,7 +22,6 @@ export class ExchangeService {
       );
     }
 
-    // Validate responder exists
     const responder = this.usersService.findById(dto.responderId);
     if (!responder) {
       throw new BadRequestException(
@@ -31,7 +29,6 @@ export class ExchangeService {
       );
     }
 
-    // Validate offered skill exists
     const offeredSkill = this.skillsService.findOne(dto.skillOfferedId);
     if (!offeredSkill) {
       throw new BadRequestException(
@@ -39,7 +36,6 @@ export class ExchangeService {
       );
     }
 
-    // Validate wanted skill exists
     const wantedSkill = this.skillsService.findOne(dto.skillWantedId);
     if (!wantedSkill) {
       throw new BadRequestException(
@@ -47,7 +43,6 @@ export class ExchangeService {
       );
     }
 
-    // Create exchange request with PENDING status
     const newRequest: ExchangeRequest = {
       id: Date.now().toString(),
       requesterId: dto.requesterId,
@@ -67,5 +62,25 @@ export class ExchangeService {
 
   findById(id: string): ExchangeRequest | undefined {
     return this.requests.find((request) => request.id === id);
+  }
+
+  findByUserId(userId: string): ExchangeRequest[] {
+    return this.requests.filter(
+      (request) =>
+        request.requesterId === userId || request.responderId === userId,
+    );
+  }
+
+  updateStatus(
+    id: string,
+    status: 'PENDING' | 'ACCEPTED' | 'REJECTED',
+  ): ExchangeRequest {
+    const request = this.findById(id);
+    if (!request) {
+      throw new BadRequestException(`Exchange request with ID ${id} not found`);
+    }
+
+    request.status = status;
+    return request;
   }
 }
