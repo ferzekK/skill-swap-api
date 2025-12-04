@@ -12,7 +12,7 @@ export class UsersService {
       id: Date.now().toString(),
       email: dto.email,
       fullName: dto.fullName,
-      passwordHash: dto.password, // In production, hash this with bcrypt
+      passwordHash: dto.password,
     };
 
     this.users.push(newUser);
