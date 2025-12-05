@@ -1,0 +1,48 @@
+# .github/workflows/ci.yml
+# CI Pipeline for Skill Swap API
+# Runs on: push to main/lab-* branches and all pull requests
+
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - 'lab-*'
+  pull_request:
+    branches:
+      - main
+      - 'lab-*'
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint Check
+        run: npm run lint
+
+      - name: Run Unit Tests
+        run: npm run test
+
+      - name: Run E2E Tests
+        run: npm run test:e2e
+        env:
+          DB_STRING: 'sqlite::memory:'
+          NODE_ENV: test
+
+      - name: Build
+        run: npm run build
