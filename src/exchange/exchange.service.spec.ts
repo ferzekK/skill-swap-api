@@ -1,17 +1,21 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { getModelToken } from '@nestjs/sequelize';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Op } from 'sequelize';
 
 import { ExchangeService } from './exchange.service';
-import { ExchangeRequest, ExchangeRequestStatus } from '../database/models';
+import {
+  ExchangeRequest,
+  ExchangeRequestStatus,
+  Skill,
+  User,
+} from '../database/models';
 import { CreateExchangeRequestDto } from '../shared/dtos/create-exchange-request.dto';
 import { SkillsService } from '../skills/skills.service';
 import { UsersService } from '../users/users.service';
 
 describe('ExchangeService', () => {
   let service: ExchangeService;
-  let usersService: UsersService;
-  let skillsService: SkillsService;
 
   const mockExchangeRequestModel = {
     create: jest.fn(),
@@ -28,6 +32,21 @@ describe('ExchangeService', () => {
   const mockSkillsService = {
     findOne: jest.fn(),
   };
+
+  const expectedInclude = [
+    {
+      model: User,
+      as: 'requester',
+      attributes: ['id', 'fullName', 'email'],
+    },
+    {
+      model: User,
+      as: 'responder',
+      attributes: ['id', 'fullName', 'email'],
+    },
+    { model: Skill, as: 'skillOffered', attributes: ['id', 'name'] },
+    { model: Skill, as: 'skillWanted', attributes: ['id', 'name'] },
+  ];
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -49,8 +68,6 @@ describe('ExchangeService', () => {
     }).compile();
 
     service = module.get<ExchangeService>(ExchangeService);
-    usersService = module.get<UsersService>(UsersService);
-    skillsService = module.get<SkillsService>(SkillsService);
 
     jest.clearAllMocks();
   });
@@ -98,10 +115,10 @@ describe('ExchangeService', () => {
       const result = await service.createExchange(validDto);
 
       expect(result).toEqual(expectedExchange);
-      expect(mockUsersService.findById).toHaveBeenCalledWith('user-1');
-      expect(mockUsersService.findById).toHaveBeenCalledWith('user-2');
-      expect(mockSkillsService.findOne).toHaveBeenCalledWith('skill-1');
-      expect(mockSkillsService.findOne).toHaveBeenCalledWith('skill-2');
+      expect(mockUsersService.findById).toHaveBeenNthCalledWith(1, 'user-1');
+      expect(mockUsersService.findById).toHaveBeenNthCalledWith(2, 'user-2');
+      expect(mockSkillsService.findOne).toHaveBeenNthCalledWith(1, 'skill-1');
+      expect(mockSkillsService.findOne).toHaveBeenNthCalledWith(2, 'skill-2');
       expect(mockExchangeRequestModel.create).toHaveBeenCalledWith({
         requesterId: 'user-1',
         responderId: 'user-2',
@@ -119,6 +136,7 @@ describe('ExchangeService', () => {
           `Requester with ID ${validDto.requesterId} not found`,
         ),
       );
+      expect(mockUsersService.findById).toHaveBeenCalledWith('user-1');
     });
 
     it('should throw BadRequestException when responder is not found', async () => {
@@ -127,7 +145,9 @@ describe('ExchangeService', () => {
         .mockResolvedValueOnce(null);
 
       await expect(service.createExchange(validDto)).rejects.toThrow(
-        BadRequestException,
+        new BadRequestException(
+          `Responder with ID ${validDto.responderId} not found`,
+        ),
       );
     });
 
@@ -168,13 +188,15 @@ describe('ExchangeService', () => {
         .mockResolvedValueOnce(null);
 
       await expect(service.createExchange(validDto)).rejects.toThrow(
-        BadRequestException,
+        new BadRequestException(
+          `Wanted skill with ID ${validDto.skillWantedId} not found`,
+        ),
       );
     });
   });
 
   describe('findAll', () => {
-    it('should return all exchange requests', async () => {
+    it('should return all exchange requests with correct query options', async () => {
       const mockExchanges = [
         { id: 'exchange-1', status: 'PENDING' },
         { id: 'exchange-2', status: 'ACCEPTED' },
@@ -184,7 +206,10 @@ describe('ExchangeService', () => {
       const result = await service.findAll();
 
       expect(result).toEqual(mockExchanges);
-      expect(mockExchangeRequestModel.findAll).toHaveBeenCalled();
+      expect(mockExchangeRequestModel.findAll).toHaveBeenCalledWith({
+        include: expectedInclude,
+        order: [['createdAt', 'DESC']],
+      });
     });
 
     it('should return empty array when no exchanges exist', async () => {
@@ -193,11 +218,15 @@ describe('ExchangeService', () => {
       const result = await service.findAll();
 
       expect(result).toEqual([]);
+      expect(mockExchangeRequestModel.findAll).toHaveBeenCalledWith({
+        include: expectedInclude,
+        order: [['createdAt', 'DESC']],
+      });
     });
   });
 
   describe('findById', () => {
-    it('should return an exchange request by id', async () => {
+    it('should return an exchange request by id with correct query options', async () => {
       const mockExchange = { id: 'exchange-1', status: 'PENDING' };
       mockExchangeRequestModel.findByPk.mockResolvedValue(mockExchange);
 
@@ -206,7 +235,9 @@ describe('ExchangeService', () => {
       expect(result).toEqual(mockExchange);
       expect(mockExchangeRequestModel.findByPk).toHaveBeenCalledWith(
         'exchange-1',
-        expect.any(Object),
+        {
+          include: expectedInclude,
+        },
       );
     });
 
@@ -216,6 +247,12 @@ describe('ExchangeService', () => {
       const result = await service.findById('non-existent');
 
       expect(result).toBeNull();
+      expect(mockExchangeRequestModel.findByPk).toHaveBeenCalledWith(
+        'non-existent',
+        {
+          include: expectedInclude,
+        },
+      );
     });
   });
 
@@ -241,7 +278,7 @@ describe('ExchangeService', () => {
   });
 
   describe('findByUserId', () => {
-    it('should return exchanges where user is requester or responder', async () => {
+    it('should return exchanges where user is requester or responder with correct query', async () => {
       const mockExchanges = [
         { id: 'exchange-1', requesterId: 'user-1', responderId: 'user-2' },
         { id: 'exchange-2', requesterId: 'user-3', responderId: 'user-1' },
@@ -251,12 +288,33 @@ describe('ExchangeService', () => {
       const result = await service.findByUserId('user-1');
 
       expect(result).toEqual(mockExchanges);
-      expect(mockExchangeRequestModel.findAll).toHaveBeenCalled();
+      expect(mockExchangeRequestModel.findAll).toHaveBeenCalledWith({
+        where: {
+          [Op.or]: [{ requesterId: 'user-1' }, { responderId: 'user-1' }],
+        },
+        include: expectedInclude,
+        order: [['createdAt', 'DESC']],
+      });
+    });
+
+    it('should return empty array when user has no exchanges', async () => {
+      mockExchangeRequestModel.findAll.mockResolvedValue([]);
+
+      const result = await service.findByUserId('user-999');
+
+      expect(result).toEqual([]);
+      expect(mockExchangeRequestModel.findAll).toHaveBeenCalledWith({
+        where: {
+          [Op.or]: [{ requesterId: 'user-999' }, { responderId: 'user-999' }],
+        },
+        include: expectedInclude,
+        order: [['createdAt', 'DESC']],
+      });
     });
   });
 
   describe('findByStatus', () => {
-    it('should return exchanges filtered by status', async () => {
+    it('should return exchanges filtered by PENDING status with correct query', async () => {
       const mockExchanges = [
         { id: 'exchange-1', status: 'PENDING' },
         { id: 'exchange-2', status: 'PENDING' },
@@ -266,7 +324,52 @@ describe('ExchangeService', () => {
       const result = await service.findByStatus('PENDING');
 
       expect(result).toEqual(mockExchanges);
-      expect(mockExchangeRequestModel.findAll).toHaveBeenCalled();
+      expect(mockExchangeRequestModel.findAll).toHaveBeenCalledWith({
+        where: { status: 'PENDING' },
+        include: expectedInclude,
+        order: [['createdAt', 'DESC']],
+      });
+    });
+
+    it('should return exchanges filtered by ACCEPTED status', async () => {
+      const mockExchanges = [{ id: 'exchange-1', status: 'ACCEPTED' }];
+      mockExchangeRequestModel.findAll.mockResolvedValue(mockExchanges);
+
+      const result = await service.findByStatus('ACCEPTED');
+
+      expect(result).toEqual(mockExchanges);
+      expect(mockExchangeRequestModel.findAll).toHaveBeenCalledWith({
+        where: { status: 'ACCEPTED' },
+        include: expectedInclude,
+        order: [['createdAt', 'DESC']],
+      });
+    });
+
+    it('should return exchanges filtered by REJECTED status', async () => {
+      const mockExchanges = [{ id: 'exchange-1', status: 'REJECTED' }];
+      mockExchangeRequestModel.findAll.mockResolvedValue(mockExchanges);
+
+      const result = await service.findByStatus('REJECTED');
+
+      expect(result).toEqual(mockExchanges);
+      expect(mockExchangeRequestModel.findAll).toHaveBeenCalledWith({
+        where: { status: 'REJECTED' },
+        include: expectedInclude,
+        order: [['createdAt', 'DESC']],
+      });
+    });
+
+    it('should return empty array when no exchanges match status', async () => {
+      mockExchangeRequestModel.findAll.mockResolvedValue([]);
+
+      const result = await service.findByStatus('REJECTED');
+
+      expect(result).toEqual([]);
+      expect(mockExchangeRequestModel.findAll).toHaveBeenCalledWith({
+        where: { status: 'REJECTED' },
+        include: expectedInclude,
+        order: [['createdAt', 'DESC']],
+      });
     });
   });
 
@@ -285,21 +388,24 @@ describe('ExchangeService', () => {
       const result = await service.updateStatus('exchange-1', 'ACCEPTED');
 
       expect(mockExchange.update).toHaveBeenCalledWith({ status: 'ACCEPTED' });
-      expect(result).toEqual(mockExchange);
+      expect(result.status).toBe('ACCEPTED');
     });
 
     it('should update status to REJECTED', async () => {
       const mockExchange = {
         id: 'exchange-1',
         status: 'PENDING' as ExchangeRequestStatus,
-        update: jest.fn().mockResolvedValue(undefined),
+        update: jest.fn().mockImplementation(function (this: any, data: any) {
+          this.status = data.status;
+          return Promise.resolve(this);
+        }),
       };
       mockExchangeRequestModel.findByPk.mockResolvedValue(mockExchange);
 
       const result = await service.updateStatus('exchange-1', 'REJECTED');
 
       expect(mockExchange.update).toHaveBeenCalledWith({ status: 'REJECTED' });
-      expect(result).toEqual(mockExchange);
+      expect(result.status).toBe('REJECTED');
     });
 
     it('should throw NotFoundException when exchange does not exist', async () => {
@@ -340,12 +446,20 @@ describe('ExchangeService', () => {
       const result = await service.count();
 
       expect(result).toBe(5);
-      expect(mockExchangeRequestModel.count).toHaveBeenCalled();
+      expect(mockExchangeRequestModel.count).toHaveBeenCalledWith();
+    });
+
+    it('should return zero when no exchanges exist', async () => {
+      mockExchangeRequestModel.count.mockResolvedValue(0);
+
+      const result = await service.count();
+
+      expect(result).toBe(0);
     });
   });
 
   describe('countByStatus', () => {
-    it('should return count of exchanges by status', async () => {
+    it('should return count of PENDING exchanges', async () => {
       mockExchangeRequestModel.count.mockResolvedValue(3);
 
       const result = await service.countByStatus('PENDING');
@@ -353,6 +467,28 @@ describe('ExchangeService', () => {
       expect(result).toBe(3);
       expect(mockExchangeRequestModel.count).toHaveBeenCalledWith({
         where: { status: 'PENDING' },
+      });
+    });
+
+    it('should return count of ACCEPTED exchanges', async () => {
+      mockExchangeRequestModel.count.mockResolvedValue(2);
+
+      const result = await service.countByStatus('ACCEPTED');
+
+      expect(result).toBe(2);
+      expect(mockExchangeRequestModel.count).toHaveBeenCalledWith({
+        where: { status: 'ACCEPTED' },
+      });
+    });
+
+    it('should return count of REJECTED exchanges', async () => {
+      mockExchangeRequestModel.count.mockResolvedValue(1);
+
+      const result = await service.countByStatus('REJECTED');
+
+      expect(result).toBe(1);
+      expect(mockExchangeRequestModel.count).toHaveBeenCalledWith({
+        where: { status: 'REJECTED' },
       });
     });
   });
