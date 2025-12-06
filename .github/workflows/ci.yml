@@ -46,3 +46,12 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  deploy:
+    name: Deploy
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/lab-6')
+    steps:
+      - name: Trigger Render deploy
+        run: curl -X GET "${{ secrets.RENDER_DEPLOY_HOOK }}"
